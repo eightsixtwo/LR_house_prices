@@ -1,0 +1,27 @@
+DROP TABLE public.prices;
+
+CREATE TABLE public.prices
+(
+    uid character varying PRIMARY KEY,
+    price integer,
+    sale_date date,
+    postcode character varying(12),
+    type character varying(1),
+    new character varying(1),
+    duration character varying(1),
+    paon character varying,
+    saon character varying,
+    street text,
+    locality text,
+    town text,
+    district text,
+    county text,
+    category character varying(1),
+	status character varying(1)
+);
+
+CREATE INDEX pcode_indx ON prices(postcode);
+
+COPY prices FROM 'C:\GIS\Ordanance_Survey\ZoomStack\house_prices_95_15.csv' CSV;
+
+SELECT COUNT(*) FROM prices;

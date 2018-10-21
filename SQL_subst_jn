@@ -1,0 +1,50 @@
+--There is no UPRN or other unique key for each property
+--To compare changes in price for the same property you will need to use a compund key comprising of postcode, poan, soan
+
+--There are a number of observations (33,000 in the october 2018 dataset) with no postcode
+--There are also a number of observations (3,700 in the october 2018 dataset) that have a postcode but no poan or soan.  
+--These will be excluded from our analysis
+
+--Create a table with the earliest price for each unique property 
+SELECT
+  UID, price, sale_date, postcode, paon, saon 
+  INTO public.pre_2004
+FROM (
+  SELECT
+    ROW_NUMBER() OVER (PARTITION BY postcode, paon, saon ORDER BY postcode, paon, saon, sale_date) AS r,
+    t.*
+  FROM
+    public.prices t) x
+WHERE
+  x.r <= 1 AND x.sale_date < '01/01/2004' AND x.postcode <>'' AND (x.paon <> '' OR x.saon <> '');  
+  
+--Create a table with the latest price for each unique property 
+SELECT
+  UID, price, sale_date, postcode, paon, saon 
+  INTO public.post_2004
+FROM (
+  SELECT
+    ROW_NUMBER() OVER (PARTITION BY postcode, paon, saon ORDER BY postcode, paon, saon, sale_date DESC) AS r,
+    t.*
+  FROM
+    public.prices t) x
+WHERE
+  x.r <= 1 AND x.sale_date >= '01/01/2004' AND x.postcode <>'' AND (x.paon <> '' OR x.saon <> '');
+ 
+--Create a table joining the earliest price to the latest house price and work out the difference
+  
+SELECT t1.postcode, t1.paon, t1.saon,  
+	t1.sale_date AS earliest_sale_date, 
+	t2.sale_date AS latest_sale_date, 
+	t1.price AS earliest_price, 
+	t2.price AS latest_price,  
+	(t2.price - t1.price) AS price_diff, 
+	(((t2.price - t1.price)/t1.price) *100) AS pct_change
+INTO public.price_analysis
+FROM public.pre_2004 t1
+INNER JOIN public.post_2004 t2
+ON t1.postcode = t2.postcode
+	AND t1.paon = t2.paon
+	AND t1.saon = t2.saon
+	ORDER BY t1.postcode, t1.paon, t1.saon	;
+
